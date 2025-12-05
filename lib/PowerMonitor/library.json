@@ -1,0 +1,14 @@
+{
+  "name": "PowerMonitor",
+  "version": "1.0.0",
+  "description": "INA219 current and voltage monitor wrapper",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ],
+  "dependencies": {
+    "adafruit/Adafruit INA219": "*"
+  }
+}
+

@@ -1,0 +1,15 @@
+{
+  "name": "ClockDisplay",
+  "version": "1.0.0",
+  "description": "Analog and digital clock rendering for GC9A01 displays",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ],
+  "dependencies": {
+    "adafruit/Adafruit GFX Library": "*",
+    "adafruit/Adafruit GC9A01A": "*"
+  }
+}
+

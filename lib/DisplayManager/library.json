@@ -1,0 +1,15 @@
+{
+  "name": "DisplayManager",
+  "version": "1.0.0",
+  "description": "Manages all 4 GC9A01 displays on shared SPI bus",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ],
+  "dependencies": {
+    "adafruit/Adafruit GFX Library": "*",
+    "adafruit/Adafruit GC9A01A": "*"
+  }
+}
+

@@ -1,0 +1,14 @@
+{
+  "name": "SensorManager",
+  "version": "1.0.0",
+  "description": "AHT10 temperature and humidity sensor wrapper",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ],
+  "dependencies": {
+    "adafruit/Adafruit AHTX0": "*"
+  }
+}
+

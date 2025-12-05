@@ -1,0 +1,11 @@
+{
+  "name": "BuzzerController",
+  "version": "1.0.0",
+  "description": "Buzzer notification controller with pattern support",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ]
+}
+

@@ -1,0 +1,14 @@
+{
+  "name": "RTCManager",
+  "version": "1.0.0",
+  "description": "RTC module wrapper with timezone support",
+  "authors": [
+    {
+      "name": "Desk Clock Project"
+    }
+  ],
+  "dependencies": {
+    "adafruit/RTClib": "*"
+  }
+}
+
