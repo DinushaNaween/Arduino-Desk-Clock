@@ -20,22 +20,28 @@ const WeatherData& WeatherClientClass::get() const {
 
 bool WeatherClientClass::update(unsigned long minIntervalMs) {
     unsigned long now = millis();
-    Serial.println("WeatherClient: update requested");
+
+    // Throttle attempts regardless of whether we have valid cached data yet.
+    // This prevents repeated HTTP attempts (and loop stalls) before the first
+    // successful fetch, and reduces jitter that can cause visible display flicker.
+    if ((now - lastFetch) < minIntervalMs) {
+        return false;
+    }
+
+    // Mark that we attempted (or are about to attempt) a fetch.
+    lastFetch = now;
+
     if(data.valid && (now - data.lastUpdate) < minIntervalMs) {
-        Serial.println("WeatherClient: cache fresh, skipping fetch");
         return false;
     }
     if(!WiFiManager.isConnected()) {
-        Serial.println("WeatherClient: WiFi not connected, skipping fetch");
         return false;
     }
     if(fetch()) {
         data.lastUpdate = now;
         data.valid = true;
-        Serial.println("WeatherClient: fetch succeeded");
         return true;
     }
-    Serial.println("WeatherClient: fetch failed");
     return false;
 }
 
