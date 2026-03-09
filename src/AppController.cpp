@@ -2,6 +2,11 @@
 #include "WiFiManager.h"
 #include "../lib/WeatherClient/src/WeatherClient.h"
 
+// When true, keeps the original behavior of clearing full screens
+// on each update (more flicker). When false, uses partial redraws
+// similar to the Focus Table Clock test harness.
+static const bool USE_BASELINE_FULL_CLEAR = false;
+
 AppController::AppController() 
     : localClock(nullptr),
       utcClock(nullptr),
@@ -107,65 +112,147 @@ bool AppController::begin() {
 
 void AppController::drawSensorData(float temp, float hum, float voltage, float current) {
     Adafruit_GC9A01A& disp = displayManager.getDisplay(DISP_SENSOR_DATA);
-    
-    // Clear screen
-    disp.fillScreen(0x0000);
-    
-    // Draw temperature (moved right to avoid clipping)
-    disp.setTextColor(0xFFE0);
-    disp.setTextSize(2);
-    disp.setCursor(40, 40);
-    disp.print("Temp:");
+
+    static bool layoutInitialized = false;
+
+    // Baseline behavior: keep full-screen clear on every update
+    if (USE_BASELINE_FULL_CLEAR) {
+        // Clear screen
+        disp.fillScreen(0x0000);
+
+        // Draw temperature (moved right to avoid clipping)
+        disp.setTextColor(0xFFE0);
+        disp.setTextSize(2);
+        disp.setCursor(40, 40);
+        disp.print("Temp:");
+        disp.setTextSize(3);
+        disp.setCursor(40, 70);
+        disp.print(temp, 1);
+        disp.print("C");
+
+        // Draw humidity (aligned with temperature column) - lower slightly
+        disp.setTextColor(0x07FF);
+        disp.setTextSize(2);
+        disp.setCursor(40, 130);
+        disp.print("Hum:");
+        disp.setTextSize(3);
+        disp.setCursor(40, 160);
+        disp.print(hum, 1);
+        disp.print("%");
+
+        // Draw Wi-Fi/NTP status (two-line format like Temp and Hum)
+        disp.setTextColor(0x00FF);
+        disp.setTextSize(2);
+        disp.setCursor(150, 40);
+        disp.print("WiFi:");
+        disp.setTextSize(2);  // Smaller font size for value, like voltage/current
+        disp.setCursor(150, 70);
+        if(WiFiManager.isConnected()) {
+            disp.print("OK");
+        } else {
+            disp.print("RTC");
+        }
+
+        // Draw voltage and current next to humidity (voltage on top, amperage below)
+        // Voltage (aligned with Hum label) - raise label to match value vertical position
+        disp.setTextColor(0x07E0);
+        disp.setTextSize(2);
+        disp.setCursor(140, 115);
+        disp.print("V:");
+        // Reduce INA219 value font size to make layout less dominant
+        disp.setTextSize(2);
+        disp.setCursor(170, 115);
+        disp.print(voltage, 2);
+        disp.print("V");
+
+        // Current (aligned with Hum value) - raise label to match value vertical position
+        disp.setTextColor(0xF800);
+        disp.setTextSize(2);
+        disp.setCursor(140, 145);
+        disp.print("I:");
+        // Reduce INA219 value font size to make layout less dominant
+        disp.setTextSize(2);
+        disp.setCursor(170, 145);
+        disp.print(current, 1);
+        disp.print("mA");
+        return;
+    }
+
+    // Optimized behavior: draw static labels once, then only overwrite numeric values
+    if (!layoutInitialized) {
+        disp.fillScreen(0x0000);
+
+        // Temperature label
+        disp.setTextColor(0xFFE0);
+        disp.setTextSize(2);
+        disp.setCursor(40, 40);
+        disp.print("Temp:");
+
+        // Humidity label
+        disp.setTextColor(0x07FF);
+        disp.setTextSize(2);
+        disp.setCursor(40, 130);
+        disp.print("Hum:");
+
+        // Wi-Fi label
+        disp.setTextColor(0x00FF);
+        disp.setTextSize(2);
+        disp.setCursor(150, 40);
+        disp.print("WiFi:");
+
+        // Voltage label
+        disp.setTextColor(0x07E0);
+        disp.setTextSize(2);
+        disp.setCursor(140, 115);
+        disp.print("V:");
+
+        // Current label
+        disp.setTextColor(0xF800);
+        disp.setTextSize(2);
+        disp.setCursor(140, 145);
+        disp.print("I:");
+
+        layoutInitialized = true;
+    }
+
+    // Temperature value
+    disp.setTextColor(0xFFE0, 0x0000);
     disp.setTextSize(3);
     disp.setCursor(40, 70);
     disp.print(temp, 1);
-    disp.print("C");
+    disp.print("C   "); // extra spaces to clear remnants
 
-    // Draw humidity (aligned with temperature column) - lower slightly
-    disp.setTextColor(0x07FF);
-    disp.setTextSize(2);
-    disp.setCursor(40, 130);
-    disp.print("Hum:");
+    // Humidity value
+    disp.setTextColor(0x07FF, 0x0000);
     disp.setTextSize(3);
     disp.setCursor(40, 160);
     disp.print(hum, 1);
-    disp.print("%");
+    disp.print("%   ");
 
-    // Draw Wi-Fi/NTP status (two-line format like Temp and Hum)
-    disp.setTextColor(0x00FF);
+    // Wi-Fi/NTP status value
+    disp.setTextColor(0x00FF, 0x0000);
     disp.setTextSize(2);
-    disp.setCursor(150, 40);
-    disp.print("WiFi:");
-    disp.setTextSize(2);  // Smaller font size for value, like voltage/current
     disp.setCursor(150, 70);
     if(WiFiManager.isConnected()) {
-        disp.print("OK");
+        disp.print("OK ");
     } else {
         disp.print("RTC");
     }
+    disp.print("   ");
 
-    // Draw voltage and current next to humidity (voltage on top, amperage below)
-    // Voltage (aligned with Hum label) - raise label to match value vertical position
-    disp.setTextColor(0x07E0);
-    disp.setTextSize(2);
-    disp.setCursor(140, 115);
-    disp.print("V:");
-    // Reduce INA219 value font size to make layout less dominant
+    // Voltage value
+    disp.setTextColor(0x07E0, 0x0000);
     disp.setTextSize(2);
     disp.setCursor(170, 115);
     disp.print(voltage, 2);
-    disp.print("V");
+    disp.print("V   ");
 
-    // Current (aligned with Hum value) - raise label to match value vertical position
-    disp.setTextColor(0xF800);
-    disp.setTextSize(2);
-    disp.setCursor(140, 145);
-    disp.print("I:");
-    // Reduce INA219 value font size to make layout less dominant
+    // Current value
+    disp.setTextColor(0xF800, 0x0000);
     disp.setTextSize(2);
     disp.setCursor(170, 145);
     disp.print(current, 1);
-    disp.print("mA");
+    disp.print("mA  ");
 }
 
 void AppController::updateSensorDisplay() {
@@ -191,7 +278,8 @@ void AppController::updateSensors() {
     if(now - lastSensorUpdate >= SENSOR_UPDATE_INTERVAL) {
         sensorManager.update();
         powerMonitor.update();
-        // Try to update weather every SENSOR_UPDATE_INTERVAL loop; WeatherClient will respect its own interval
+        // Update weather on its own cadence (default 10 min). The WeatherClient
+        // implementation also throttles retries to avoid loop stalls.
         WeatherClient.update();
         updateSensorDisplay();
         lastSensorUpdate = now;
@@ -201,38 +289,110 @@ void AppController::updateSensors() {
 void AppController::drawWeatherData() {
     Adafruit_GC9A01A& disp = displayManager.getDisplay(DISP_SCREENSAVER);
     const WeatherData &w = WeatherClient.get();
+    
+    static bool layoutInitialized = false;
 
-    // Clear
-    disp.fillScreen(0x0000);
+    // Baseline behavior: clear the full screen every time
+    if (USE_BASELINE_FULL_CLEAR) {
+        // Clear
+        disp.fillScreen(0x0000);
 
-    // Header: Today
-    disp.setTextSize(2);
-    disp.setTextColor(0xFFFF);
+        // Header: Today
+        disp.setTextSize(2);
+        disp.setTextColor(0xFFFF);
+        int16_t bx, by; uint16_t bw, bh;
+        const char* header = "Today";
+        disp.getTextBounds(header, 0, 0, &bx, &by, &bw, &bh);
+        int hx = (240 - bw) / 2;
+        disp.setCursor(hx, 10);
+        disp.print(header);
+
+        // City name
+        disp.setTextSize(1);
+        String city = w.valid ? w.city : String("Unknown");
+        disp.getTextBounds(city.c_str(), 0, 0, &bx, &by, &bw, &bh);
+        int cx = (240 - bw) / 2;
+        disp.setCursor(cx, 30);
+        disp.print(city);
+
+        // Large temperature in center
+        disp.setTextSize(4);
+        disp.setTextColor(0xFFE0);
+        String tstr = w.valid ? String((int)round(w.tempC)) + String("°") : String("--°");
+        disp.getTextBounds(tstr.c_str(), 0, 0, &bx, &by, &bw, &bh);
+        int tx = (240 - bw) / 2;
+        disp.setCursor(tx, 80);
+        disp.print(tstr);
+
+        // Simple icons at 12/3/6/9 positions (use condition mapping)
+        auto drawSun = [&](int x, int y) {
+            disp.fillCircle(x, y, 8, 0xFFE0);
+        };
+        auto drawCloud = [&](int x, int y) {
+            disp.fillCircle(x-6, y, 8, 0xFFFF);
+            disp.fillCircle(x+6, y, 8, 0xFFFF);
+            disp.fillRect(x-12, y, 24, 10, 0xFFFF);
+        };
+
+        String cond = w.valid ? w.condition : String("");
+        bool isClear = cond.indexOf("Clear") >= 0;
+        bool isClouds = cond.indexOf("Cloud") >= 0;
+        bool isRain = cond.indexOf("Rain") >= 0;
+
+        // 12 o'clock
+        if(isClear) drawSun(120, 20); else if(isClouds) drawCloud(120, 20); else drawSun(120,20);
+        // 3 o'clock
+        if(isRain) drawCloud(200, 120); else if(isClear) drawSun(200, 120); else drawCloud(200,120);
+        // 6 o'clock
+        if(isClouds) drawCloud(120, 200); else drawSun(120, 200);
+        // 9 o'clock
+        if(isClear) drawSun(40, 120); else drawCloud(40,120);
+        return;
+    }
+
+    // Optimized behavior: static header, dynamic text/icons with partial clears
+    if (!layoutInitialized) {
+        disp.fillScreen(0x0000);
+
+        // Header: Today (static)
+        disp.setTextSize(2);
+        disp.setTextColor(0xFFFF);
+        int16_t bx, by; uint16_t bw, bh;
+        const char* header = "Today";
+        disp.getTextBounds(header, 0, 0, &bx, &by, &bw, &bh);
+        int hx = (240 - bw) / 2;
+        disp.setCursor(hx, 10);
+        disp.print(header);
+
+        layoutInitialized = true;
+    }
+
     int16_t bx, by; uint16_t bw, bh;
-    const char* header = "Today";
-    disp.getTextBounds(header, 0, 0, &bx, &by, &bw, &bh);
-    int hx = (240 - bw) / 2;
-    disp.setCursor(hx, 10);
-    disp.print(header);
 
-    // City name
+    // City name (overwrite with background color)
     disp.setTextSize(1);
+    disp.setTextColor(0xFFFF, 0x0000);
     String city = w.valid ? w.city : String("Unknown");
     disp.getTextBounds(city.c_str(), 0, 0, &bx, &by, &bw, &bh);
     int cx = (240 - bw) / 2;
     disp.setCursor(cx, 30);
     disp.print(city);
+    disp.print("   ");
 
-    // Large temperature in center
+    // Large temperature in center (overwrite with background color)
     disp.setTextSize(4);
-    disp.setTextColor(0xFFE0);
+    disp.setTextColor(0xFFE0, 0x0000);
     String tstr = w.valid ? String((int)round(w.tempC)) + String("°") : String("--°");
     disp.getTextBounds(tstr.c_str(), 0, 0, &bx, &by, &bw, &bh);
     int tx = (240 - bw) / 2;
     disp.setCursor(tx, 80);
     disp.print(tstr);
+    disp.print("  ");
 
-    // Simple icons at 12/3/6/9 positions (use condition mapping)
+    // Simple icons at 12/3/6/9 positions (clear small regions then draw)
+    auto clearIconRegion = [&](int x, int y) {
+        disp.fillRect(x - 16, y - 16, 32, 32, 0x0000);
+    };
     auto drawSun = [&](int x, int y) {
         disp.fillCircle(x, y, 8, 0xFFE0);
     };
@@ -248,12 +408,16 @@ void AppController::drawWeatherData() {
     bool isRain = cond.indexOf("Rain") >= 0;
 
     // 12 o'clock
+    clearIconRegion(120, 20);
     if(isClear) drawSun(120, 20); else if(isClouds) drawCloud(120, 20); else drawSun(120,20);
     // 3 o'clock
+    clearIconRegion(200, 120);
     if(isRain) drawCloud(200, 120); else if(isClear) drawSun(200, 120); else drawCloud(200,120);
     // 6 o'clock
+    clearIconRegion(120, 200);
     if(isClouds) drawCloud(120, 200); else drawSun(120, 200);
     // 9 o'clock
+    clearIconRegion(40, 120);
     if(isClear) drawSun(40, 120); else drawCloud(40,120);
 
 }
@@ -266,12 +430,20 @@ void AppController::updateDisplays() {
         // Display 2: show EST (UTC-5:00)
         TimeData estTime = rtcManager.getTimeWithOffset(-5, 0); // EST -5:00
 
-        // Update clock displays with current RTC time
-        localClock->update(localTime.hour, localTime.minute, localTime.second); // Display 1: IST
-        utcClock->update(estTime.hour, estTime.minute, estTime.second); // Display 2: EST
-        
-        // Draw weather information on the 4th display
-        drawWeatherData();
+        // Update clocks only when the displayed second changes (reduces redundant redraw).
+        static int lastClockSecond = -1;
+        if (localTime.second != lastClockSecond) {
+            localClock->update(localTime.hour, localTime.minute, localTime.second); // Display 1: IST
+            utcClock->update(estTime.hour, estTime.minute, estTime.second); // Display 2: EST
+            lastClockSecond = localTime.second;
+        }
+
+        // Draw weather less frequently; it does not need 10 FPS.
+        static unsigned long lastWeatherDraw = 0;
+        if (now - lastWeatherDraw >= 1000) {
+            drawWeatherData();
+            lastWeatherDraw = now;
+        }
         
         lastDisplayUpdate = now;
     }
